@@ -26,9 +26,8 @@ python3 -m http.server 8000
 
 ## Deploy to GitHub Pages
 
-The included workflow (`.github/workflows/pages.yml`) publishes the repo root to GitHub
-Pages on every push to `main`. One-time setup: in the repo settings, under
-**Settings → Pages → Build and deployment**, set **Source** to **GitHub Actions**.
+The repo root is a ready-to-serve static site. In **Settings → Pages → Build and
+deployment**, set **Source** to **Deploy from a branch** and pick `main` / root.
 
 ## Notes on the math
 
