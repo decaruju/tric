@@ -2,14 +2,14 @@
 
 "use strict";
 
-const NUM_FIELDS = ["gs", "gw", "gr", "gh", "nk", "ch", "wa", "es", "fl", "bl", "bnr", "ua", "wr", "sl", "nrd", "hrd", "crd"];
+const NUM_FIELDS = ["gs", "gw", "gr", "gh", "nk", "ch", "wa", "es", "fl", "bl", "ua", "wr", "sl", "nrd", "hrd", "crd"];
 const SEL_FIELDS = ["nrt", "hrt", "crt"];
 const OPT_NUM = ["yd"]; // optional numeric (blank = auto)
 
 const DEFAULTS = {
   gs: 22, gw: 10, gr: 30, gh: 10,
   nk: 56, ch: 100, wa: 96, es: 0,
-  fl: 38, bl: 40, bnr: 2.5, yd: "",
+  fl: 38, bl: 40, yd: "",
   ua: 36, wr: 20, sl: 45,
   nrt: "1x1", nrd: 3, hrt: "2x2", hrd: 5, crt: "2x2", crd: 5,
   col: "#7c9a72", shownums: true,

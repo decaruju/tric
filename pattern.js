@@ -11,6 +11,10 @@ const RIBS = {
   "none": { name: "rolled edge", repeat: 1, text: "Knit every round (the edge will roll naturally)" },
 };
 
+// Short-row geometry: first turn 3 sts past the raglan marker, each pair 2 sts farther.
+const SR_INTO = 3;
+const SR_STEP = 2;
+
 function roundToMultiple(n, mult) {
   if (mult <= 1) return Math.round(n);
   return Math.max(mult, Math.round(n / mult) * mult);
@@ -36,20 +40,50 @@ function computePattern(input) {
   const neckMult = Math.max(2, neckRib.repeat); // even for symmetric distribution
   const neckSts = roundToMultiple(input.nk * spc, neckMult);
 
-  let sleeve0 = Math.max(4, Math.round(neckSts / 6));
-  let front0 = Math.floor((neckSts - 2 * sleeve0) / 2);
-  let back0 = neckSts - 2 * sleeve0 - front0;
+  const sleeve0 = Math.max(4, Math.round(neckSts / 6));
+
+  // ---- Back shaping: short rows at the back neck ----------------------------
+  // The back/front length difference is worked as German short rows in the yoke,
+  // with raglan increases integrated whenever a short row crosses a raglan marker.
+  const backRaise = input.bl - input.fl;
+  if (backRaise < -0.4) {
+    warnings.push("Back length is shorter than front length; this generator only supports a back that is the same length or longer. Back shaping is skipped.");
+  }
+  let srPairs = Math.max(0, Math.round((Math.max(0, backRaise) * rpc) / 2));
+  // Turns must stay inside the sleeve sections: turn p reaches SR_INTO + SR_STEP*(p-1)
+  // sts into a sleeve that has sleeve0 + p sts on that side by then.
+  const maxPairs = Math.max(0, sleeve0 - SR_INTO);
+  let hemSrPairs = 0, hemSrStep = 0, hemOverflowRaise = 0;
+  if (srPairs > maxPairs) {
+    hemSrPairs = srPairs - maxPairs;
+    hemOverflowRaise = (hemSrPairs * 2) / rpc;
+    srPairs = maxPairs;
+    warnings.push(`A back raise of ${fmt(backRaise)} cm needs ${srPairs + hemSrPairs} short-row pairs, but the neck short rows run out of sleeve room after ${maxPairs}. The remaining ${fmt(hemOverflowRaise)} cm is worked as short rows above the hem ribbing instead.`);
+  }
+  const srBackGain = srPairs > 0 ? 2 * srPairs : 0;   // back sts gained during short rows (incl. equalizing round)
+  const srSleeveGain = srPairs > 0 ? srPairs : 0;     // per sleeve
+
+  // The short-row increases land asymmetrically (the back gains srBackGain sts, the
+  // front none), so the neck split starts the back srBackGain sts narrower — back
+  // and front then hold equal counts from the end of the short rows to separation.
+  const bodyShare = neckSts - 2 * sleeve0;
+  let front0 = Math.floor((bodyShare + srBackGain) / 2);
+  let back0 = bodyShare - front0;
+  if (back0 < 6) {
+    warnings.push("The back raise leaves almost no back-neck stitches at cast-on; the back starts with 6 sts and will end slightly wider than the front. Consider a smaller back/front difference or a wider neck.");
+    back0 = 6;
+    front0 = bodyShare - 6;
+  }
 
   // ---- Target stitch counts ------------------------------------------------
   let chestSts = Math.round(chest * spc);
   if (chestSts % 2) chestSts += 1;
   const uaCO = Math.max(4, 2 * Math.round(chestSts * 0.04 / 2)); // underarm cast-on, each side
-  let upperArmSts = Math.round(upperArm * spc);
+  const upperArmSts = Math.round(upperArm * spc);
 
-  // ---- Raglan increase rounds ---------------------------------------------
-  // Body sections gain 4 sts per increase round (2 front + 2 back... per section 2).
-  let rBody = Math.ceil((chestSts - 2 * uaCO - front0 - back0) / 4);
-  let rSleeve = Math.ceil((upperArmSts - uaCO - sleeve0) / 2);
+  // ---- Raglan increase rounds (after the short rows) ------------------------
+  let rBody = Math.ceil((chestSts - 2 * uaCO - front0 - back0 - srBackGain) / 4);
+  let rSleeve = Math.ceil((upperArmSts - uaCO - sleeve0 - srSleeveGain) / 2);
   if (rBody < 1) { warnings.push("Chest is barely larger than the neck opening — check your measurements."); rBody = Math.max(rBody, 0); }
   if (rSleeve < 1) { warnings.push("Upper arm is very close to the initial sleeve stitch count — check upper-arm circumference."); rSleeve = Math.max(rSleeve, 0); }
 
@@ -58,25 +92,13 @@ function computePattern(input) {
   const rSleeveOnly = Math.max(0, rSleeve - rBody);
 
   const frontSep = front0 + 2 * rBody;
-  const backSep = back0 + 2 * rBody;
-  const sleeveSep = sleeve0 + 2 * rSleeve;
+  const backSep = back0 + srBackGain + 2 * rBody;
+  const sleeveSep = sleeve0 + srSleeveGain + 2 * rSleeve;
   const bodyTotal = frontSep + backSep + 2 * uaCO;      // actual body sts at separation
   const sleeveTotal = sleeveSep + uaCO;                  // actual sleeve sts after pick-up
 
-  // ---- Back-neck short rows -------------------------------------------------
-  let srPairs = Math.max(0, Math.round((input.bnr * rpc) / 2));
-  const srInto = Math.min(3, Math.max(1, Math.floor(sleeve0 / 4))); // sts worked into sleeve at first turn
-  const maxInward = Math.floor(back0 * 0.4);
-  let srStep = srPairs > 1 ? Math.max(2, Math.floor(maxInward / (srPairs - 1))) : 0;
-  const maxPairs = 1 + Math.floor(maxInward / 2);
-  if (srPairs > maxPairs) {
-    warnings.push(`Back-neck raise of ${fmt(input.bnr)} cm needs ${srPairs} short-row pairs but the back neck only has room for ${maxPairs}; the pattern uses ${maxPairs}. Consider a smaller raise or a wider neck.`);
-    srPairs = maxPairs;
-    srStep = srPairs > 1 ? Math.max(2, Math.floor(maxInward / (srPairs - 1))) : 0;
-  }
-
   // ---- Yoke depth ------------------------------------------------------------
-  const incRounds = 2 * Math.max(rBody, rSleeve); // increase every other round
+  const incRounds = 2 * Math.max(rBody, rSleeve) + (srPairs > 0 ? 2 : 0); // + resume/plain rounds
   const autoYokeDepth = incRounds / rpc;
   let yokeDepth = input.yd > 0 ? input.yd : Math.round(autoYokeDepth * 2) / 2;
   let evenRounds = 0;
@@ -106,19 +128,12 @@ function computePattern(input) {
       shapeEvery = Math.max(2, shapeEvery);
     }
   }
-
-  // Hem short rows for a longer back
-  const hemRaise = input.bl - input.fl;
-  let hemSrPairs = 0, hemSrStep = 0;
-  if (hemRaise > 0.4) {
-    hemSrPairs = Math.max(1, Math.round((hemRaise * rpc) / 2));
+  if (hemSrPairs > 0) {
     const backHalf = Math.floor(hemRibSts / 2);
     hemSrStep = Math.max(2, Math.floor((backHalf * 0.7) / hemSrPairs));
     if (hemSrPairs * hemSrStep > backHalf) {
-      warnings.push("The back/front hem difference is large for the stitch count; the hem short rows will be steep.");
+      warnings.push("The overflow hem short rows are steep for the stitch count; consider a smaller back/front difference.");
     }
-  } else if (hemRaise < -0.4) {
-    warnings.push("Back length is shorter than front length; this generator only supports a back that is the same length or longer. The back hem short rows are skipped.");
   }
 
   // ---- Sleeves ----------------------------------------------------------------
@@ -158,10 +173,10 @@ function computePattern(input) {
     chestSts, uaCO, upperArmSts,
     rBody, rSleeve, rCommon, rBodyOnly, rSleeveOnly,
     frontSep, backSep, sleeveSep, bodyTotal, sleeveTotal,
-    srPairs, srInto, srStep,
+    backRaise: Math.max(0, backRaise), srPairs, srBackGain, srSleeveGain,
     yokeDepth, yokeRounds, incRounds, evenRounds, autoYokeDepth,
     hemRibSts, bodyDelta, shapeRounds, shapeEvery, shapeRemainder,
-    hemRaise, hemSrPairs, hemSrStep,
+    hemSrPairs, hemSrStep, hemOverflowRaise,
     wristSts, sleeveDelta, sleeveDecRounds, sleeveDecEvery, sleeveDecRemainder,
     yarnMeters,
     actual: {
@@ -171,6 +186,7 @@ function computePattern(input) {
       upperArm: sleeveTotal / spc,
       wrist: wristSts / spc,
       yokeDepth: yokeRounds / rpc,
+      backRaise: (srPairs * 2) / rpc,
     },
   };
 
@@ -193,8 +209,9 @@ function buildInstructions(input, c) {
     title: "Overview & finished measurements",
     html: `
       <p>Top-down seamless raglan pullover, worked in the round in stockinette. The neckband is knit first,
-      the back of the neck is raised with German short rows, then raglan increases shape the yoke.
-      Body and sleeves are separated at the underarms and worked down to ribbed edges.</p>
+      then the back is raised with German short rows — with the raglan increases worked right inside the
+      short rows whenever they cross a raglan line. Body and sleeves are separated at the underarms and
+      worked down to ribbed edges.</p>
       <table class="meas">
         <tr><th>Gauge</th><td>${fmt(c.spc * 10)} sts and ${fmt(c.rpc * 10)} rounds = 10 cm in stockinette</td></tr>
         <tr><th>Neck</th><td>${fmt(c.actual.neck)} cm — ${c.neckSts} sts</td></tr>
@@ -202,8 +219,8 @@ function buildInstructions(input, c) {
         <tr><th>Hem</th><td>${fmt(c.actual.hem)} cm — ${c.hemRibSts} sts</td></tr>
         <tr><th>Upper arm</th><td>${fmt(c.actual.upperArm)} cm — ${c.sleeveTotal} sts</td></tr>
         <tr><th>Wrist</th><td>${fmt(c.actual.wrist)} cm — ${c.wristSts} sts</td></tr>
-        <tr><th>Yoke depth</th><td>≈ ${fmt(c.actual.yokeDepth)} cm (${c.yokeRounds} rounds + short rows)</td></tr>
-        <tr><th>Body length</th><td>${fmt(input.fl)} cm front / ${fmt(input.bl)} cm back, underarm to hem</td></tr>
+        <tr><th>Yoke depth</th><td>≈ ${fmt(c.actual.yokeDepth)} cm at the front (${c.yokeRounds} rounds); the back is ${fmt(c.actual.backRaise)} cm deeper</td></tr>
+        <tr><th>Body length</th><td>${fmt(input.fl)} cm front / ${fmt(input.bl)} cm back</td></tr>
         <tr><th>Sleeve length</th><td>${fmt(input.sl)} cm, underarm to cuff</td></tr>
         <tr><th>Yarn estimate</th><td>≈ ${c.yarnMeters} m <em>(very rough — buy at least 15&nbsp;% extra)</em></td></tr>
       </table>
@@ -227,24 +244,28 @@ function buildInstructions(input, c) {
     html: li([
       `Set-up round (switch to your main needles if you ribbed on smaller ones): knit <b>${c.back0}</b> back sts, place marker&nbsp;1, knit <b>${c.sleeve0}</b> left-sleeve sts, place marker&nbsp;2, knit <b>${c.front0}</b> front sts, place marker&nbsp;3, knit <b>${c.sleeve0}</b> right-sleeve sts. The BOR marker sits between the right sleeve and the back.`,
       `Section check: back ${c.back0} · sleeve ${c.sleeve0} · front ${c.front0} · sleeve ${c.sleeve0} = <b>${c.neckSts} sts</b>.`,
-    ]),
+    ]) + (c.srBackGain > 0 ? `<p class="note">The back starts ${c.srBackGain} sts narrower than the front on purpose: the back-shaping short rows will add ${c.srBackGain} sts to the back only, so back and front meet at equal counts.</p>` : ""),
   });
 
-  // -- Short rows
+  // -- Back shaping: short rows with integrated raglan increases
   if (c.srPairs > 0) {
     const sr = [];
-    sr.push(`Short row 1 (RS): knit across the back to marker&nbsp;1, slip marker, k${c.srInto} into the left sleeve, <b>turn</b>.`);
-    sr.push(`Short row 2 (WS): make a double stitch (DS), purl back across the back, slip the BOR marker, p${c.srInto} into the right sleeve, <b>turn</b>.`);
+    sr.push(`Short row 1 (RS): knit to 1 st before marker&nbsp;1, M1R, k1, slip marker, k1, M1L, k1, <b>turn</b>.`);
+    sr.push(`Short row 2 (WS): make a double stitch (DS), purl back across the back (slipping markers), slip the BOR marker, p${SR_INTO} into the right sleeve, <b>turn</b>. <em>No increases on WS rows.</em>`);
     if (c.srPairs > 1) {
-      sr.push(`Short rows 3–${2 * c.srPairs}: make a DS, work to <b>${c.srStep} sts before</b> the DS of the previous row on that side, turn. Repeat until you have worked <b>${c.srPairs} turns on each side</b> (${c.srPairs} double stitches per side).`);
+      sr.push(`Short row 3 and all following RS rows: make a DS, knit forward — <b>each time you reach a raglan marker, work the increase</b> (knit to 1 st before marker, M1R, k1, slip marker, k1, M1L) — continue to the DS of the previous row on this side, knit both its legs together as one st, k${SR_STEP}, <b>turn</b>.`);
+      sr.push(`Short row 4 and all following WS rows: make a DS, purl to the DS of the previous row on this side, purl it as one st, p${SR_STEP}, <b>turn</b>.`);
+      sr.push(`Repeat the last two rows until you have worked <b>${c.srPairs} turns on each side</b> (${c.srPairs} double stitches per sleeve).`);
     }
-    sr.push(`After the last WS turn: make a DS, knit to the BOR marker. Resume working in the round; on the next full round, knit each double stitch as a single stitch (knit both legs together).`);
+    sr.push(`After the last WS turn: make a DS, then knit to the BOR marker <em>without increasing</em>.`);
+    sr.push(`Equalizing round: k1, M1L, knit to the last st of the round, M1R, k1 — knitting each remaining DS as one st along the way. This works the increase pair at the BOR raglan that short row&nbsp;1 skipped.`);
+    sr.push(`Knit 1 round plain. Stitch check: back <b>${c.back0 + c.srBackGain}</b> · left sleeve <b>${c.sleeve0 + c.srSleeveGain}</b> · front <b>${c.front0}</b> · right sleeve <b>${c.sleeve0 + c.srSleeveGain}</b>.`);
     s.push({
-      title: `3 · Back-neck shaping — ${c.srPairs} pairs of German short rows (≈ ${fmt((c.srPairs * 2) / c.rpc)} cm raise)`,
-      html: li(sr) + note("This lifts the back of the neck so the sweater sits forward on the shoulders instead of choking at the front."),
+      title: `3 · Back shaping — ${c.srPairs} pairs of German short rows (back raised ≈ ${fmt(c.actual.backRaise)} cm)`,
+      html: li(sr) + note(`The short rows come from your back/front length difference (${fmt(input.bl)} − ${fmt(input.fl)} cm). Because every RS short row crosses the back raglan lines, the increases keep their every-other-round rhythm right through the shaping. The back gains ${c.srBackGain} sts and ${2 * c.srPairs} rows here — the narrower back cast-on split absorbs the stitches, so back and front are equal again from this point on.`),
     });
   } else {
-    s.push({ title: "3 · Back-neck shaping", html: "<p>Skipped (back-neck raise set to 0).</p>" });
+    s.push({ title: "3 · Back shaping", html: "<p>Skipped — back and front lengths are equal, so no short rows are needed. To raise the back neck, make the back length a little longer than the front (2–4 cm is typical).</p>" });
   }
 
   // -- Raglan increases
@@ -296,13 +317,13 @@ function buildInstructions(input, c) {
     }
   }
   if (c.hemSrPairs > 0) {
-    body.push(`<b>Back hem short rows</b> (the back hangs ${fmt(c.hemRaise)} cm lower): Short row 1 (RS): knit across the back to 2 sts before the left side marker, turn. Short row 2 (WS): make a DS, purl across the back to 2 sts before the right side marker, turn.`);
+    body.push(`<b>Back hem short rows</b> (overflow from the back raise — the back hem hangs ${fmt(c.hemOverflowRaise)} cm lower): Short row 1 (RS): knit across the back to 2 sts before the left side marker, turn. Short row 2 (WS): make a DS, purl across the back to 2 sts before the right side marker, turn.`);
     body.push(`Short rows 3–${2 * c.hemSrPairs}: make a DS, work to <b>${c.hemSrStep} sts before</b> the previous DS on that side, turn — until ${c.hemSrPairs} turns are worked on each side. After the last turn, make a DS and knit to the BOR marker. Knit one full round, knitting each DS as one stitch.`);
   }
   if (input.hrt === "none") {
     body.push(`Knit ${fmt(input.hrd)} cm plain for a rolled hem, then bind off loosely.`);
   } else {
-    body.push(`Work ${hemRib.name} (${hemRib.text}) for <b>${fmt(input.hrd)} cm</b>. Bind off in pattern with a stretchy bind-off. Total front length ≈ ${fmt(input.fl)} cm, back ≈ ${fmt(input.bl)} cm.`);
+    body.push(`Work ${hemRib.name} (${hemRib.text}) for <b>${fmt(input.hrd)} cm</b>. Bind off in pattern with a stretchy bind-off. Total front length ≈ ${fmt(input.fl)} cm.`);
   }
   s.push({ title: `6 · Body — ${hemRib.name} hem`, html: li(body) });
 

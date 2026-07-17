@@ -77,9 +77,9 @@ function renderDiagram(svg, input, calc) {
   // Body
   el("polygon", { points: P([A, B, UR, HR, HL, UL]), fill: col, stroke: lineCol, "stroke-width": 0.6, "stroke-linejoin": "round" });
 
-  // Back hem (longer back), dashed
-  if (backLen - frontLen > 0.4) {
-    const ex = backLen - frontLen;
+  // Back hem (overflow short rows above the hem), dashed
+  if (calc.hemOverflowRaise > 0.4) {
+    const ex = calc.hemOverflowRaise;
     el("path", {
       d: `M ${HL.x} ${HL.y} C ${HL.x} ${HL.y + ex * 1.3}, ${HR.x} ${HR.y + ex * 1.3}, ${HR.x} ${HR.y}`,
       fill: "none", stroke: lineCol, "stroke-width": 0.6, "stroke-dasharray": "1.5 1.2",
@@ -126,7 +126,7 @@ function renderDiagram(svg, input, calc) {
   const stsOn = input.shownums;
   const lb = (cm, sts, unit) => `${fmt(cm)} cm${stsOn && sts != null ? ` · ${sts} ${unit || "sts"}` : ""}`;
 
-  const hemExt = Math.max(0, backLen - frontLen); // dashed back-hem extension
+  const hemExt = calc.hemOverflowRaise > 0.4 ? calc.hemOverflowRaise : 0; // dashed back-hem extension
   // chest at underarm
   dim(UL.x, yoke + 2.5, UR.x, yoke + 2.5, lb(calc.actual.chest, calc.bodyTotal), { dy: fs * 1.3 });
   // hem (below the dashed back hem and its note)
@@ -165,7 +165,7 @@ function renderDiagram(svg, input, calc) {
     el("text", { x: 0, y: -bnr * 1.6 + fs * 0.2 - 0.8, "font-size": fs * 0.85, fill: "#555", "text-anchor": "middle" }, `back raised ${fmt(bnr)} cm (${calc.srPairs} short-row pairs)`);
   }
   if (hemExt > 0.4) {
-    el("text", { x: 0, y: totalH + hemExt + fs * 1.1, "font-size": fs * 0.85, fill: "#555", "text-anchor": "middle" }, `back ${fmt(hemExt)} cm longer (${calc.hemSrPairs} short-row pairs)`);
+    el("text", { x: 0, y: totalH + hemExt + fs * 1.1, "font-size": fs * 0.85, fill: "#555", "text-anchor": "middle" }, `hem overflow ${fmt(hemExt)} cm (${calc.hemSrPairs} short-row pairs)`);
   }
 
   // ---- Assemble with computed viewBox --------------------------------------
