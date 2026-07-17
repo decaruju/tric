@@ -358,3 +358,8 @@ function buildInstructions(input, c) {
 
   return s;
 }
+
+// Node export for tests; ignored in the browser.
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = { computePattern, RIBS };
+}

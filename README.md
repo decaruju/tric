@@ -25,6 +25,21 @@ Open `index.html` in a browser, or serve the folder:
 python3 -m http.server 8000
 ```
 
+## Tests
+
+```sh
+node --test
+```
+
+The suite checks the engine against a published free pattern — [Midnight Glow / DROPS 254-39](https://www.garnstudio.com/pattern.php?id=11893&cid=19)
+(top-down stockinette raglan, 17 sts × 22 rows = 10 cm): feeding the generator the finished
+measurements each DROPS size implies at that gauge reproduces the published stitch counts
+(neck cast-on exactly, body/sleeve/wrist within a few stitches, yoke depth within 2 cm for
+the sizes DROPS knits with plain every-other-round raglan). It also sweeps the input space
+for internal consistency: sections always sum, measurements are hit in cm, longer backs
+produce more short rows with back = front at separation, short-row turns stay inside the
+sleeves, and rib edges land on full repeats.
+
 ## Deploy to GitHub Pages
 
 The repo root is a ready-to-serve static site. In **Settings → Pages → Build and
