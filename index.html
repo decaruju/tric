@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tric — Custom Raglan Pullover Pattern Builder</title>
+<link rel="stylesheet" href="style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧶</text></svg>">
+</head>
+<body>
+<header class="topbar">
+  <h1>🧶 Tric <span class="subtitle">— custom top-down raglan pullover pattern builder</span></h1>
+  <div class="topbar-actions">
+    <button id="copy-link" class="btn" title="Copy a shareable link with all your settings">Copy shareable link</button>
+    <button id="print-btn" class="btn btn-secondary" title="Print the pattern">Print pattern</button>
+  </div>
+</header>
+
+<div class="layout">
+  <aside class="panel form-panel" id="form-panel">
+    <form id="pattern-form" autocomplete="off">
+
+      <fieldset>
+        <legend>Gauge (swatch in stockinette, blocked)</legend>
+        <div class="row two">
+          <label>Stitches <input type="number" id="gs" min="1" step="0.5" value="22"></label>
+          <label>over width (cm) <input type="number" id="gw" min="1" step="0.1" value="10"></label>
+        </div>
+        <div class="row two">
+          <label>Rows <input type="number" id="gr" min="1" step="0.5" value="30"></label>
+          <label>over height (cm) <input type="number" id="gh" min="1" step="0.1" value="10"></label>
+        </div>
+        <p class="hint" id="gauge-hint"></p>
+      </fieldset>
+
+      <fieldset>
+        <legend>Body measurements (finished garment, cm)</legend>
+        <div class="row two">
+          <label>Neck circumference <input type="number" id="nk" min="20" step="0.5" value="56"></label>
+          <label>Chest circumference <input type="number" id="ch" min="30" step="0.5" value="100"></label>
+        </div>
+        <div class="row two">
+          <label>Hem circumference <input type="number" id="wa" min="30" step="0.5" value="96"></label>
+          <label>Ease to add (cm) <input type="number" id="es" step="0.5" value="0"></label>
+        </div>
+        <div class="row two">
+          <label>Front length, underarm→hem <input type="number" id="fl" min="5" step="0.5" value="38"></label>
+          <label>Back length, underarm→hem <input type="number" id="bl" min="5" step="0.5" value="40"></label>
+        </div>
+        <div class="row two">
+          <label>Back-neck raise (short rows) <input type="number" id="bnr" min="0" step="0.5" value="2.5"></label>
+          <label>Yoke depth (blank = auto) <input type="number" id="yd" min="0" step="0.5" placeholder="auto"></label>
+        </div>
+        <p class="hint">Ease is added to chest, hem and upper-arm circumferences. Back-neck raise lifts the back of the neck with German short rows. If back length &gt; front length, the difference is worked as short rows above the hem ribbing.</p>
+      </fieldset>
+
+      <fieldset>
+        <legend>Sleeves (cm)</legend>
+        <div class="row two">
+          <label>Upper-arm circumference <input type="number" id="ua" min="15" step="0.5" value="36"></label>
+          <label>Wrist circumference <input type="number" id="wr" min="10" step="0.5" value="20"></label>
+        </div>
+        <div class="row two">
+          <label>Sleeve length, underarm→cuff <input type="number" id="sl" min="5" step="0.5" value="45"></label>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Ribbing</legend>
+        <div class="row rib">
+          <label>Neckband
+            <select id="nrt">
+              <option value="1x1">1×1 rib</option>
+              <option value="2x2">2×2 rib</option>
+              <option value="3x1">3×1 rib</option>
+              <option value="tw">Twisted 1×1 rib</option>
+              <option value="none">None (rolled edge)</option>
+            </select>
+          </label>
+          <label>depth (cm) <input type="number" id="nrd" min="0" step="0.5" value="3"></label>
+        </div>
+        <div class="row rib">
+          <label>Hem
+            <select id="hrt">
+              <option value="1x1">1×1 rib</option>
+              <option value="2x2" selected>2×2 rib</option>
+              <option value="3x1">3×1 rib</option>
+              <option value="tw">Twisted 1×1 rib</option>
+              <option value="none">None (rolled edge)</option>
+            </select>
+          </label>
+          <label>depth (cm) <input type="number" id="hrd" min="0" step="0.5" value="5"></label>
+        </div>
+        <div class="row rib">
+          <label>Cuffs
+            <select id="crt">
+              <option value="1x1">1×1 rib</option>
+              <option value="2x2" selected>2×2 rib</option>
+              <option value="3x1">3×1 rib</option>
+              <option value="tw">Twisted 1×1 rib</option>
+              <option value="none">None (rolled edge)</option>
+            </select>
+          </label>
+          <label>depth (cm) <input type="number" id="crd" min="0" step="0.5" value="5"></label>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Diagram</legend>
+        <div class="row two">
+          <label>Yarn colour <input type="color" id="col" value="#7c9a72"></label>
+          <label class="checkbox"><input type="checkbox" id="shownums" checked> Show stitch counts</label>
+        </div>
+      </fieldset>
+
+    </form>
+  </aside>
+
+  <main class="main-panel">
+    <section class="panel diagram-panel">
+      <h2>Schematic</h2>
+      <div id="diagram-wrap"><svg id="diagram" role="img" aria-label="Sweater schematic"></svg></div>
+    </section>
+
+    <section class="panel" id="warnings-panel" hidden>
+      <h2>⚠ Check these</h2>
+      <ul id="warnings"></ul>
+    </section>
+
+    <section class="panel pattern-panel">
+      <h2>Pattern</h2>
+      <div id="pattern"></div>
+    </section>
+  </main>
+</div>
+
+<footer class="footer">
+  <p>Everything runs in your browser — nothing is uploaded. The URL updates as you type, so you can bookmark or share your exact pattern. Numbers are a starting point: always trust your own gauge swatch and try the sweater on as you go.</p>
+</footer>
+
+<script src="pattern.js"></script>
+<script src="diagram.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

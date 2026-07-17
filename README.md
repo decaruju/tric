@@ -1,0 +1,42 @@
+# 🧶 Tric — custom raglan pullover pattern builder
+
+A knitting pattern generator that runs entirely in the browser. Enter your gauge swatch and
+target measurements and it writes a complete top-down raglan pullover pattern, with:
+
+- **Top-down seamless raglan** construction (increase every other round, with compound
+  body-only / sleeve-only increases when body and sleeves need different amounts)
+- **Back-neck shaping with German short rows**, plus optional back-hem short rows when the
+  back is longer than the front
+- **Ribbing options** (1×1, 2×2, 3×1, twisted 1×1, or rolled edge) with independent depth
+  for neckband, hem, and cuffs
+- **A live, to-scale SVG schematic** with all measurements and stitch counts
+- **Shareable URLs** — every parameter is stored in the query string as you type, so you can
+  bookmark a size or send the exact pattern to someone
+- A rough yarn-meterage estimate and a printable pattern layout
+
+No build step, no dependencies, no server: plain HTML/CSS/JS.
+
+## Run locally
+
+Open `index.html` in a browser, or serve the folder:
+
+```sh
+python3 -m http.server 8000
+```
+
+## Deploy to GitHub Pages
+
+The included workflow (`.github/workflows/pages.yml`) publishes the repo root to GitHub
+Pages on every push to `main`. One-time setup: in the repo settings, under
+**Settings → Pages → Build and deployment**, set **Source** to **GitHub Actions**.
+
+## Notes on the math
+
+- Gauge is converted to stitches/rows per cm; every measurement is rounded to workable
+  stitch counts (ribbing edges are rounded to the rib repeat).
+- Neck stitches are split ⅓ back / ⅓ front / ⅙ per sleeve.
+- Underarm cast-on is ≈ 8 % of the chest stitch count (4 % per side).
+- The generator warns about tight necks, too-steep sleeve tapers, short-row overcrowding,
+  and yoke-depth conflicts instead of silently producing an unknittable pattern.
+
+Numbers are a starting point — always trust your own swatch and try the sweater on as you go.
